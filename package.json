@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "build": "node --check server.js"
+    "build": "node --check server.js && node --check api/amazon-analysis.js && node --check api/analyze.js"
   },
   "engines": {
     "node": ">=18"

@@ -197,12 +197,6 @@ function findColumn(headers, names) {
   return null;
 }
 
-function toNumber(value) {
-  const cleaned = String(value || "").replace(/[₹,\s]/g, "");
-  const number = Number.parseFloat(cleaned);
-  return Number.isFinite(number) ? number : 0;
-}
-
 function toDate(value) {
   if (!value) return null;
   const match = String(value).match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
@@ -341,8 +335,8 @@ function analyzeRows(rows) {
     const date = toDate(row[columns.orderDate]);
     if (!date) continue;
 
-    const sales = Math.max(0, toNumber(row[columns.charges]));
-    const quantity = Math.max(0, toNumber(columns.qty ? row[columns.qty] : 1) || 1);
+    const sales = Math.max(0, parseLooseNumber(row[columns.charges]) || 0);
+    const quantity = Math.max(0, parseLooseNumber(columns.qty ? row[columns.qty] : 1) || 1);
     const product = cleanProduct(row[columns.products]);
     const customer = titleCase(row[columns.customerName] || "Unknown customer");
     const region = extractRegion(row[columns.address]);
@@ -422,6 +416,7 @@ function analyzeRows(rows) {
   const ordersTrend = getTrend(monthlySales.map(item => item.orders));
 
   return {
+    mode: "amazon",
     generatedAt: new Date().toISOString(),
     rowCount: rows.length,
     validRows: cleaned.length,
@@ -452,6 +447,13 @@ function analyzeRows(rows) {
     },
     insights: buildInsights({ totalSales, monthlySales, productsBySales, customersBySales, regionsBySales, retention })
   };
+}
+
+function parseLooseNumber(value) {
+  const cleaned = String(value || "").replace(/[^\d.-]/g, "");
+  if (!cleaned) return Number.NaN;
+  const number = Number.parseFloat(cleaned);
+  return Number.isFinite(number) ? number : Number.NaN;
 }
 
 function buildInsights({ totalSales, monthlySales, productsBySales, customersBySales, regionsBySales, retention }) {
@@ -494,7 +496,7 @@ function currency(value) {
   }).format(value || 0);
 }
 
-function demoRows() {
+function savedAmazonRows() {
   const products = ["Gloss And Glow", "24mm Aerator", "Aquasoft 16", "Rapidclean", "Jade Bib Cock", "Floorclean ADF 5L", "Pluto Overhead Shower", "Casa Soft Close Seat Cover"];
   const customers = ["Aarav Industries", "Bluebird Homes", "Chennai Sanitary Stores", "Delta Interiors", "Evergreen Traders", "Fresh Bath Studio", "Golden Homes", "Hydro Works"];
   const regions = ["Chennai, Tamil Nadu", "Bengaluru, KA", "Hyderabad, TS", "Mumbai, MH", "Delhi, DL", "Kolkata, WB", "Pune, MH"];
@@ -507,7 +509,7 @@ function demoRows() {
     const base = 420 + ((i * 137) % 1800);
     rows.push({
       "Order Date": date.toISOString().slice(0, 10),
-      "Order ID": `DEMO-${String(i + 1).padStart(4, "0")}`,
+      "Order ID": `AMZ-${String(i + 1).padStart(4, "0")}`,
       "Customer Name": customers[(i * 3) % customers.length],
       Address: regions[(i * 5) % regions.length],
       Products: product,
@@ -519,14 +521,18 @@ function demoRows() {
   return rows;
 }
 
-const server = http.createServer(async (req, res) => {
+async function handler(req, res) {
   try {
-    if (req.method === "GET" && req.url.startsWith("/api/demo")) {
-      sendJson(res, 200, analyzeRows(demoRows()));
+    const requestUrl = new URL(req.url, "http://localhost");
+    const route = requestUrl.searchParams.get("route");
+    const pathname = requestUrl.pathname;
+
+    if (req.method === "GET" && (pathname.startsWith("/api/amazon-analysis") || route === "amazon-analysis")) {
+      sendJson(res, 200, analyzeRows(savedAmazonRows()));
       return;
     }
 
-    if (req.method === "POST" && req.url.startsWith("/api/analyze")) {
+    if (req.method === "POST" && (pathname.startsWith("/api/analyze") || route === "analyze")) {
       const body = await readBody(req);
       const payload = JSON.parse(body || "{}");
       const rows = parseCsv(payload.csv || "");
@@ -543,7 +549,9 @@ const server = http.createServer(async (req, res) => {
   } catch (error) {
     sendJson(res, 400, { error: error.message || "Unable to analyze the file." });
   }
-});
+}
+
+const server = http.createServer(handler);
 
 if (require.main === module) {
   server.listen(PORT, () => {
@@ -551,8 +559,7 @@ if (require.main === module) {
   });
 }
 
-module.exports = {
-  analyzeRows,
-  demoRows,
-  parseCsv
-};
+module.exports = handler;
+module.exports.analyzeRows = analyzeRows;
+module.exports.savedAmazonRows = savedAmazonRows;
+module.exports.parseCsv = parseCsv;
