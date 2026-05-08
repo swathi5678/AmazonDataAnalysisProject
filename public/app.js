@@ -1,5 +1,4 @@
 const fileInput = document.querySelector("#csvFile");
-const demoButton = document.querySelector("#demoButton");
 const clearButton = document.querySelector("#clearButton");
 const statusEl = document.querySelector("#status");
 const dashboard = document.querySelector("#dashboard");
@@ -11,9 +10,10 @@ const currency = new Intl.NumberFormat("en-IN", {
 });
 
 const number = new Intl.NumberFormat("en-IN");
-
 const colors = ["#f39b32", "#1e8a6a", "#246bcb", "#af3f64", "#6d5bd0"];
 let latestData = null;
+
+loadBuiltInAnalysis();
 
 fileInput.addEventListener("change", async event => {
   const file = event.target.files[0];
@@ -23,24 +23,23 @@ fileInput.addEventListener("change", async event => {
   analyzeCsv(csv);
 });
 
-demoButton.addEventListener("click", async () => {
-  setStatus("Loading demo dashboard...");
+clearButton.addEventListener("click", () => {
+  fileInput.value = "";
+  loadBuiltInAnalysis();
+});
+
+async function loadBuiltInAnalysis() {
+  setStatus("Loading saved Amazon analysis...");
   try {
-    const response = await fetch("/api/demo");
+    const response = await fetch("/api/amazon-analysis");
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     renderDashboard(data);
-    setStatus("Demo data loaded. Upload your CSV when you are ready.");
+    setStatus("Saved Amazon analysis loaded. Upload your Amazon CSV to replace it.");
   } catch (error) {
     setStatus(error.message, true);
   }
-});
-
-clearButton.addEventListener("click", () => {
-  fileInput.value = "";
-  dashboard.classList.add("hidden");
-  setStatus("Ready for your dataset.");
-});
+}
 
 async function analyzeCsv(csv) {
   try {
@@ -52,7 +51,7 @@ async function analyzeCsv(csv) {
     const data = await response.json();
     if (!response.ok) throw new Error(data.error);
     renderDashboard(data);
-    setStatus("Analysis complete.");
+    setStatus("Amazon analysis pipeline complete.");
   } catch (error) {
     setStatus(error.message, true);
   }
@@ -66,25 +65,48 @@ function setStatus(message, isError = false) {
 function renderDashboard(data) {
   latestData = data;
   dashboard.classList.remove("hidden");
+  text("#dashboardEyebrow", "Amazon pipeline");
+  text("#dashboardTitle", "Business Overview");
   text("#rowCount", `${number.format(data.rowCount)} rows`);
   text("#validRows", `${number.format(data.validRows)} valid orders`);
+  text("#kpiOneLabel", "Total Sales");
   text("#totalSales", currency.format(data.summary.totalSales));
   text("#salesTrend", trendLabel(data.summary.salesTrend, "sales"));
+  text("#kpiTwoLabel", "Orders");
   text("#totalOrders", number.format(data.summary.totalOrders));
   text("#ordersTrend", trendLabel(data.summary.ordersTrend, "orders"));
+  text("#kpiThreeLabel", "Average Order");
   text("#averageOrderValue", currency.format(data.summary.averageOrderValue));
   text("#uniqueCustomers", `${number.format(data.summary.uniqueCustomers)} customers`);
+  text("#kpiFourLabel", "Top Region");
   text("#topRegion", data.summary.bestRegion?.name || "-");
   text("#topRegionSales", currency.format(data.summary.bestRegion?.sales || 0));
+  text("#mainChartEyebrow", "Revenue");
+  text("#mainChartTitle", "Monthly Sales Trend");
   text("#bestMonth", data.summary.bestMonth ? `${data.summary.bestMonth.label} led sales` : "Best month");
+  text("#sidePanelEyebrow", "Forecast");
+  text("#sidePanelTitle", "Next 6 Months");
+  text("#rankOneEyebrow", "Products");
+  text("#rankOneTitle", "Top by Sales");
+  text("#rankTwoEyebrow", "Locations");
+  text("#rankTwoTitle", "Regional Revenue");
+  text("#rankThreeEyebrow", "Customers");
+  text("#rankThreeTitle", "Top Accounts");
+  text("#bottomChartOneEyebrow", "Product Movement");
+  text("#bottomChartOneTitle", "Quantity Leaders");
+  text("#bottomChartTwoEyebrow", "Retention");
+  text("#bottomChartTwoTitle", "Customer Health");
+  text("#segmentEyebrow", "Segments");
+  text("#segmentTitle", "Customer Value Groups");
+  text("#insightEyebrow", "Actions");
+  text("#insightTitle", "Recommended Focus");
 
   drawLineChart("monthlyChart", data.charts.monthlySales.map(item => item.label), data.charts.monthlySales.map(item => item.sales), {
     color: "#f39b32",
     fill: "rgba(243,155,50,0.14)",
-    valuePrefix: "₹"
+    valuePrefix: "INR "
   });
   drawBarChart("quantityChart", data.charts.productsByQuantity.map(item => item.name), data.charts.productsByQuantity.map(item => item.quantity), {
-    horizontal: true,
     color: "#246bcb"
   });
   drawLineChart("retentionChart", data.charts.retention.map(item => item.month), data.charts.retention.map(item => item.retentionRate), {
@@ -93,9 +115,9 @@ function renderDashboard(data) {
     valueSuffix: "%"
   });
 
-  renderRanks("#productSales", data.charts.productsBySales, "sales");
-  renderRanks("#regionSales", data.charts.regionsBySales, "sales");
-  renderRanks("#customerSales", data.charts.customersBySales, "sales");
+  renderRanks("#productSales", data.charts.productsBySales, "sales", "currency");
+  renderRanks("#regionSales", data.charts.regionsBySales, "sales", "currency");
+  renderRanks("#customerSales", data.charts.customersBySales, "sales", "currency");
   renderForecast(data.charts.forecast);
   renderSegments(data.charts.customerSegments);
   renderInsights(data.insights);
@@ -110,11 +132,11 @@ function trendLabel(value, noun) {
   return `${sign}${value}% latest month ${noun}`;
 }
 
-function renderRanks(selector, items, field) {
+function renderRanks(selector, items, field, format = "number") {
   const root = document.querySelector(selector);
   const max = Math.max(...items.map(item => item[field] || 0), 1);
   root.innerHTML = items.map((item, index) => {
-    const value = field === "sales" ? currency.format(item[field]) : number.format(item[field]);
+    const value = format === "currency" ? currency.format(item[field] || 0) : number.format(item[field] || 0);
     const width = Math.max(4, (item[field] / max) * 100);
     return `
       <div class="rank-row">
@@ -141,17 +163,31 @@ function renderForecast(items) {
 function renderSegments(items) {
   const root = document.querySelector("#segments");
   const groups = items.reduce((acc, item) => {
-    acc[item.label] = acc[item.label] || { label: item.label, count: 0, sales: 0 };
+    acc[item.label] = acc[item.label] || { label: item.label, count: 0, sales: 0, customers: [] };
     acc[item.label].count += 1;
     acc[item.label].sales += item.sales;
+    acc[item.label].customers.push(item);
     return acc;
   }, {});
 
   root.innerHTML = Object.values(groups).map(group => `
     <div class="segment-card">
       <strong>${escapeHtml(group.label)}</strong>
-      <span>${number.format(group.count)} customers</span>
-      <span>${currency.format(group.sales)}</span>
+      <div class="segment-summary">
+        <span>${number.format(group.count)} customers</span>
+        <span>${currency.format(group.sales)}</span>
+      </div>
+      <div class="segment-customers">
+        ${group.customers
+          .sort((a, b) => b.sales - a.sales)
+          .map(customer => `
+            <div class="segment-customer" title="${escapeHtml(customer.name)}">
+              <span>${escapeHtml(customer.name)}</span>
+              <small>${currency.format(customer.sales)}</small>
+            </div>
+          `)
+          .join("")}
+      </div>
     </div>
   `).join("");
 }
@@ -174,17 +210,18 @@ function drawLineChart(canvasId, labels, values, options = {}) {
 
   const points = values.map((value, index) => ({
     x: padding.left + (index / Math.max(labels.length - 1, 1)) * (width - padding.left - padding.right),
-    y: padding.top + ((max - value) / range) * (height - padding.top - padding.bottom),
-    value
+    y: padding.top + ((max - value) / range) * (height - padding.top - padding.bottom)
   }));
+
+  if (!points.length) return;
 
   context.beginPath();
   points.forEach((point, index) => {
     if (index === 0) context.moveTo(point.x, point.y);
     else context.lineTo(point.x, point.y);
   });
-  context.lineTo(points[points.length - 1]?.x || padding.left, height - padding.bottom);
-  context.lineTo(points[0]?.x || padding.left, height - padding.bottom);
+  context.lineTo(points[points.length - 1].x, height - padding.bottom);
+  context.lineTo(points[0].x, height - padding.bottom);
   context.closePath();
   context.fillStyle = options.fill || "rgba(36,107,203,0.1)";
   context.fill();
@@ -296,7 +333,7 @@ function compact(value) {
 
 function truncate(value, length) {
   const text = String(value);
-  return text.length > length ? `${text.slice(0, length - 1)}…` : text;
+  return text.length > length ? `${text.slice(0, length - 3)}...` : text;
 }
 
 function escapeHtml(value) {
