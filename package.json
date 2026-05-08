@@ -1,0 +1,21 @@
+{
+  "name": "amazon-sales-analysis-dashboard",
+  "version": "1.0.0",
+  "description": "Deployable fullstack Amazon order analytics dashboard.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "amazon",
+    "analytics",
+    "dashboard",
+    "sales"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amazon Sales Command Center</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Amazon order intelligence</p>
+          <h1>Sales Command Center</h1>
+          <p class="lede">Upload your Amazon yearly CSV and get a deployment-ready analytics dashboard with sales trends, customer segments, location performance and forecasts.</p>
+        </div>
+        <div class="upload-panel">
+          <label class="drop-zone" for="csvFile">
+            <span class="drop-icon">CSV</span>
+            <strong>Upload order CSV</strong>
+            <span>Required columns: Order Date, Products, Total Product Charges. Customer, address and quantity unlock richer insights.</span>
+            <input id="csvFile" type="file" accept=".csv,text/csv" />
+          </label>
+          <div class="upload-actions">
+            <button id="demoButton" type="button">Load demo data</button>
+            <button id="clearButton" type="button" class="ghost">Reset</button>
+          </div>
+          <p id="status" class="status">Ready for your dataset.</p>
+        </div>
+      </section>
+
+      <section id="dashboard" class="dashboard hidden" aria-live="polite">
+        <div class="toolbar">
+          <div>
+            <p class="eyebrow">Live dashboard</p>
+            <h2>Business Overview</h2>
+          </div>
+          <div class="toolbar-meta">
+            <span id="rowCount">0 rows</span>
+            <span id="validRows">0 valid orders</span>
+          </div>
+        </div>
+
+        <section class="kpi-grid">
+          <article class="kpi">
+            <span>Total Sales</span>
+            <strong id="totalSales">₹0</strong>
+            <small id="salesTrend">0% latest month</small>
+          </article>
+          <article class="kpi">
+            <span>Orders</span>
+            <strong id="totalOrders">0</strong>
+            <small id="ordersTrend">0% latest month</small>
+          </article>
+          <article class="kpi">
+            <span>Average Order</span>
+            <strong id="averageOrderValue">₹0</strong>
+            <small id="uniqueCustomers">0 customers</small>
+          </article>
+          <article class="kpi accent">
+            <span>Top Region</span>
+            <strong id="topRegion">-</strong>
+            <small id="topRegionSales">₹0</small>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel wide">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Revenue</p>
+                <h3>Monthly Sales Trend</h3>
+              </div>
+              <span id="bestMonth" class="pill">Best month</span>
+            </div>
+            <canvas id="monthlyChart" height="280"></canvas>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Forecast</p>
+                <h3>Next 6 Months</h3>
+              </div>
+            </div>
+            <div id="forecastList" class="forecast-list"></div>
+          </article>
+        </section>
+
+        <section class="grid three">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Products</p>
+                <h3>Top by Sales</h3>
+              </div>
+            </div>
+            <div id="productSales" class="rank-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Locations</p>
+                <h3>Regional Revenue</h3>
+              </div>
+            </div>
+            <div id="regionSales" class="rank-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Customers</p>
+                <h3>Top Accounts</h3>
+              </div>
+            </div>
+            <div id="customerSales" class="rank-list"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Product Movement</p>
+                <h3>Quantity Leaders</h3>
+              </div>
+            </div>
+            <canvas id="quantityChart" height="260"></canvas>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Retention</p>
+                <h3>Customer Health</h3>
+              </div>
+            </div>
+            <canvas id="retentionChart" height="260"></canvas>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Segments</p>
+                <h3>Customer Value Groups</h3>
+              </div>
+            </div>
+            <div id="segments" class="segment-board"></div>
+          </article>
+
+          <article class="panel insight-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Actions</p>
+                <h3>Recommended Focus</h3>
+              </div>
+            </div>
+            <div id="insights" class="insight-list"></div>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

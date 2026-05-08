@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: amazon-sales-analysis-dashboard
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
